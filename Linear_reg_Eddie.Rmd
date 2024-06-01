@@ -1,0 +1,105 @@
+---
+title: "Bayesian linear regression"
+---
+
+First of all let us import the relevant packages
+
+```{r}
+library(caret)
+library(MCMCpack)
+library(rstanarm)
+library(ggplot2)
+library(gridExtra)
+library(corrplot)
+library(reshape2)
+library(RColorBrewer)
+library(bayesplot)
+library(dplyr)
+library(glmnet)
+library(plotmo)
+library(BayesVarSel)
+```
+
+We import now the preprocessed data and visualize it and the structure
+
+```{r}
+housing <- read.csv('C:/Users/Eddie/OneDrive/Desktop/Data Science/Baseyian statistics/Final project/housing_ligth_preprocessing.csv')
+
+head(housing)
+#summary(housing)
+```
+
+## Standard Linear Regression
+
+Let us perform the linear regression and then we set up the bayesian framework.
+
+```{r}
+m1 <- lm(median_house_value ~ ., data = housing)
+summary(m1)
+```
+
+First of all let us clarify why the last variable produces NA: this dummy variables is redundant because it can be predicted exactly by the other dummy variables. In the sense that $$[0,0,0,0]$$ is equivalent to $$[0,0,0,0,1]$$ for dummy encoding.
+
+As we can see from the above linear regression all the variables are significant except for one: the one-hot encoding ocean_proximity 1H.Ocean . As a consequence, we can think of dropping this variable, but before proceeding let us further analyze the results and check if we can optimize the model
+
+```{r}
+plot(m1)
+```
+
+We can see from the previous graph that overall the residuals of the linear regression are normal, which means that the model fitted properly (also confirmed by the p_value which is very small in the summary). In general, we are explaining the 65% of the variability of median_house_value with our data.
+
+## Analysis and model selection
+
+First of all let us check the variance-covariance matrix that is useful to understand, in explaining the model, the relation between variables and their contribution
+
+```{r}
+vc<-vcov(m1)
+round(vc,2)
+```
+
+From the previous table, we can see that the variance of each variable is high which means that the model is unstable this is because the data is very large and variable of interest assumes high values: to obtain better results we can try to use the logarithm on `median_house_value`
+
+```{r}
+m2_reg <- lm(log(median_house_value) ~ ., data = housing)
+summary(m2_reg)
+
+```
+
+Now all the variables are significant and R-squared increased! Let us check the variance-covariance matrix
+
+```{r}
+v_2 <- vcov(m2_reg)
+round(v_2,6)
+```
+
+From the previous results we can see that even after pre-processing we can see a bit of relation between variables `total_rooms`, `households`, `population`, `total_bedrooms`. In addition, now the results are acceptable, leading to a more stable model. From the summary, also, we can see that the most significant variable is median_income.
+
+Let us check what happens if we just use median_income variable in the linear regression
+
+```{r}
+m3_income<- lm(log(median_house_value) ~ median_income, data = housing)
+summary(m3_income)
+
+```
+
+```{r}
+pred <- data.frame(median_income = housing$median_income)
+pred$log_median_house_value <- predict(m3_income, newdata = pred)
+plot(housing$median_income, log(housing$median_house_value),
+     xlab = "Median Income",
+     ylab = "Log(Median House Value)",
+     main = "Linear Regression of Log(Median House Value) on Median Income")
+lines(pred$median_income, pred$log_median_house_value, col = "blue", lwd = 2)
+```
+
+The R_squared is significantly lower from $0.65$ to $0.40$ meaning that the previous model better explain the target variable. Now, let us perform a complete model selection. We start from the base linear model and then find the best single predictor and, keeping it we add a second one following the same procedure, and successively, until we find a satisfactory subset.
+
+```{r}
+ls0<-lm(log(median_house_value)~1, data=housing)
+step(ls0,"~longitude+latitude+housing_median_age+total_rooms+total_bedrooms+population+households+median_income+ ocean_proximity_.1H.OCEAN+ocean_proximity_INLAND+ocean_proximity_ISLAND+ocean_proximity_NEAR.BAY")
+
+```
+
+In the last, we can see the best model according to the step function starting from the intercept. As we expected the median_income is the most important feature. It is interesting that, at the end, we are taking into account variables that are correlated. It would be interesting, but yet far from the scope of this project, to try to compress variables `latitude` and `longitude` in a geographical one and also variables `total_rooms`, `households`, `population`and `total_bedrooms`in a single variable and then perform the linear regression. Finally, we are ready to start with the Bayesian analysis.
+
+## Bayesian Setting
