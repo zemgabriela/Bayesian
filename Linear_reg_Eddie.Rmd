@@ -5,6 +5,7 @@ title: "Bayesian linear regression"
 First of all let us import the relevant packages
 
 ```{r}
+install.packages('bayestestR')
 library(caret)
 library(MCMCpack)
 library(rstanarm)
@@ -17,6 +18,7 @@ library(bayesplot)
 library(dplyr)
 library(glmnet)
 library(plotmo)
+library(bayestestR)
 library(BayesVarSel)
 ```
 
@@ -103,3 +105,28 @@ step(ls0,"~longitude+latitude+housing_median_age+total_rooms+total_bedrooms+popu
 In the last, we can see the best model according to the step function starting from the intercept. As we expected the median_income is the most important feature. It is interesting that, at the end, we are taking into account variables that are correlated. It would be interesting, but yet far from the scope of this project, to try to compress variables `latitude` and `longitude` in a geographical one and also variables `total_rooms`, `households`, `population`and `total_bedrooms`in a single variable and then perform the linear regression. Finally, we are ready to start with the Bayesian analysis.
 
 ## Bayesian Setting
+
+To fit a Bayesian regression, we use the function stan_glm from the rstanarm package. By default the prior distribution for the regression coefficients is the normal distribution.
+
+```{r}
+model_bayes <- stan_glm(log(median_house_value)~., data=housing, seed=111)
+
+```
+
+Let us check the results now.
+
+```{r}
+print(model_bayes, digits = 3)
+```
+And now let us check the distribution of our parameters
+
+```{r}
+mcmc_dens(model_bayes)
+```
+
+Finally, we evaluate the model parameters
+
+```{r}
+describe_posterior(model_bayes)
+```
+
