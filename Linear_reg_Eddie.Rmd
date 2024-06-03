@@ -118,6 +118,7 @@ Let us check the results now.
 ```{r}
 print(model_bayes, digits = 3)
 ```
+
 And now let us check the distribution of our parameters
 
 ```{r}
@@ -129,4 +130,51 @@ Finally, we evaluate the model parameters
 ```{r}
 describe_posterior(model_bayes)
 ```
+
+It is important to underline that several credible intervals of the coefficients contain zero, suggesting that we could potentially simplify the model. In particular, all the one-hot encoded variables seems to provide no useful information, suggesting that we can remove them to retrain the model.
+
+## Comparison and selection
+
+First of all let us compare the classical model and then Bayesian one:
+
+```{r}
+classic_aic <- AIC(m2_reg)
+classic_bic <- BIC(m2_reg)
+
+print(paste("AIC classical model:", classic_aic))
+print(paste("BIC classical model:", classic_bic))
+
+```
+
+Bayesian model selection is to pick variables for multiple linear regression based on Bayesian information criterion We use the library BAS to check which vairables are of interests and the overall performance of the bayesian model.
+
+```{r}
+install.packages('BAS')
+library(BAS)
+```
+
+```{r}
+model.BIC = bas.lm(log(median_house_value)~., data = housing,
+                 prior = "BIC", modelprior = uniform()) # it means that each model has equal probability
+
+model.BIC
+```
+
+We recall that when $n$ is sufficiently large, then we have that $$BIC \approx -2\ln(p(data|M)) $$
+
+where $M$ is the model. We can use this information to retrieve the model with the largest log of marginal likelihood, which correspond to the model with smallest BIC.
+
+```{r}
+# best model
+best = which.max(model.BIC$logmarg)
+
+# Retrieve the index of variables in the best model, with 0 as the index of the intercept
+bestmodel = model.BIC$which[[best]]
+bestmodel
+
+```
+The comparison of the BIC, allowed us to decide that all the variables are relevant except for `ocean_proximity_NEAR.BAY` and `ocean_proximity_NEAR.OCEAN`, which partially confirms what we saw in the distribution of the parameters. This is exactly the advantage of using Bayesian statistics over classical methods.  
+
+
+
 
