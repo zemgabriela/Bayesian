@@ -102,6 +102,16 @@ step(ls0,"~longitude+latitude+housing_median_age+total_rooms+total_bedrooms+popu
 
 ```
 
+Let us check the results for the best model
+
+```{r}
+best_linear_model <- lm(formula = log(median_house_value) ~ median_income + ocean_proximity_INLAND + 
+    total_bedrooms + population + housing_median_age + total_rooms + 
+    households + longitude + latitude + ocean_proximity_NEAR.BAY + 
+    ocean_proximity_ISLAND + ocean_proximity_.1H.OCEAN, data = housing)
+summary(best_linear_model)
+```
+
 In the last, we can see the best model according to the step function starting from the intercept. As we expected the median_income is the most important feature. It is interesting that, at the end, we are taking into account variables that are correlated. It would be interesting, but yet far from the scope of this project, to try to compress variables `latitude` and `longitude` in a geographical one and also variables `total_rooms`, `households`, `population`and `total_bedrooms`in a single variable and then perform the linear regression. Finally, we are ready to start with the Bayesian analysis.
 
 ## Bayesian Setting
@@ -173,8 +183,5 @@ bestmodel = model.BIC$which[[best]]
 bestmodel
 
 ```
-The comparison of the BIC, allowed us to decide that all the variables are relevant except for `ocean_proximity_NEAR.BAY` and `ocean_proximity_NEAR.OCEAN`, which partially confirms what we saw in the distribution of the parameters. This is exactly the advantage of using Bayesian statistics over classical methods.  
 
-
-
-
+The comparison of the BIC, allowed us to decide that all the variables are relevant except for `ocean_proximity_NEAR.BAY` and `ocean_proximity_NEAR.OCEAN`, which partially confirms what we saw in the distribution of the parameters. This is exactly the advantage of using Bayesian statistics over classical methods.
